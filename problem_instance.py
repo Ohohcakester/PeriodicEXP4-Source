@@ -90,22 +90,6 @@ def repeat_instance(T, repeats, instanceFun):
 
     return run, maxGain, numNetworks
 
-def add_noise_to_instance(T, percentageNoise, seed, instanceFun):
-    localRandom = random.Random(seed)
-    instance, maxGain, numNetworks = instanceFun(T)
-
-    def run(networkList):
-        runInstance = instance(networkList)
-        for timeout in runInstance:
-            dataRates = [network.dataRate for network in networkList]
-            steps = timeout//3
-            for t in range(steps):
-                for dataRate, network in zip(dataRates, networkList):
-                    network.dataRate = max(0, dataRate + localRandom.gauss(0, percentageNoise*dataRate))
-                yield 3
-
-    return run, maxGain, numNetworks
-
 ''' __________ problem instance definitions __________ '''
 '''       the keys are the problem instance names      '''
 
@@ -179,52 +163,33 @@ PROBLEM_INSTANCES = {
 
     'instance_cont1': 
     lambda T: make_continuous_datarate_instance(T,
-        numNetworks=5, seed=3, scale=1, totalBandwidth=100,
+        numNetworks=3, seed=3, scale=1, totalBandwidth=65,
         offsetPercent=0),
 
     'instance_cont2': 
     lambda T: make_continuous_datarate_instance(T,
-        numNetworks=5, seed=531, scale=3, totalBandwidth=100,
+        numNetworks=3, seed=531, scale=3, totalBandwidth=65,
         offsetPercent=0),
 
     'instance_cont3': 
     lambda T: make_continuous_datarate_instance(T,
-        numNetworks=5, seed=15, scale=4, totalBandwidth=100,
+        numNetworks=3, seed=15, scale=3, totalBandwidth=65,
         offsetPercent=0),
 
     'instance_cont4': 
     lambda T: make_continuous_datarate_instance(T,
-        numNetworks=5, seed=389, scale=2, totalBandwidth=100,
+        numNetworks=3, seed=389, scale=2, totalBandwidth=65,
         offsetPercent=0.3),
 
     'instance_cont5': 
     lambda T: make_continuous_datarate_instance(T,
-        numNetworks=5, seed=821, scale=3, totalBandwidth=100,
+        numNetworks=3, seed=821, scale=3, totalBandwidth=65,
         offsetPercent=0.6),
 
     'instance_cont6': 
     lambda T: make_continuous_datarate_instance(T,
         numNetworks=5, seed=411, scale=2.5, totalBandwidth=100,
         offsetPercent=0.03),
-
-    'instance_f1': 
-    lambda T: make_fractional_datarate_instance(T, {
-        0:   (7,14,44),
-        1/4: (36,7,22),
-        2/4: (9,16,40),
-        3/4: (40,4,21),
-    }),
-
-    'instance_cont_f1': 
-    lambda T: make_continuous_datarate_instance(T,
-        numNetworks=3, seed=10, scale=3, totalBandwidth=65,
-        offsetPercent=0),
-
-    'instance_cont_f2': 
-    lambda T: make_continuous_datarate_instance(T,
-        numNetworks=3, seed=11, scale=1, totalBandwidth=65,
-        offsetPercent=0),
-
 }
 
 ''' __________________________________________________ '''
@@ -235,15 +200,19 @@ def test_continuous_datarate_instance():
     #seed = 2
 
     T = 1440
+    numRepeat = 1
     import matplotlib.pyplot as plt
     class NetworkStub(object):
         def __init__(self):
             self.dataRate = 0
 
-    numNetworks = 5
+    numNetworks = 3
     #instance, _1, numNetworks = make_continuous_datarate_instance(T, numNetworks, seed, 1, 100)
-    #instance, _1, numNetworks = add_noise_to_instance(T, 0.1, 15, lambda T : repeat_instance(T, 1, PROBLEM_INSTANCES['instance_f1']))
-    instance, _1, numNetworks = repeat_instance(T, 1, PROBLEM_INSTANCES['instance_cont_f2'])
+    instance, _1, numNetworks = repeat_instance(T, numRepeat, PROBLEM_INSTANCES['instance_cont3'])
+    print("instance:", instance)
+    print("_1", _1)
+    print("numNetworks:", numNetworks)
+
     #instance, _1, numNetworks = PROBLEM_INSTANCES['instance_testing'](T)
 
     networkList = [NetworkStub() for i in range(numNetworks)]
@@ -259,21 +228,23 @@ def test_continuous_datarate_instance():
         results.append([network.dataRate for network in networkList])
 
     results = [list(v) for v in zip(*results)] #transpose
+
+    print("results:", results)
     x = list(range(T))
 
     for bandwidth in results:
-        plt.plot(x, bandwidth)
         print(bandwidth)
+        plt.plot(x, bandwidth)
     plt.show()
 
-def test_continuous_functions():
-    T = 1000
-    import matplotlib.pyplot as plt
-    x = list(range(T))
-    for i in range(2):
-        f = make_random_continous_function(T, random.randrange(10000), 1, 10)
-        plt.plot(x, [f(t) for t in x])
-    plt.show()
+# def test_continuous_functions():
+#     T = 1000
+#     import matplotlib.pyplot as plt
+#     x = list(range(T))
+#     for i in range(2):
+#         f = make_random_continous_function(T, random.randrange(10000), 1, 10)
+#         # plt.plot(x, [f(t) for t in x])
+#     # plt.show()
 
 # 0 = start.
 if __name__ == '__main__':

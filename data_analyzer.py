@@ -17,11 +17,6 @@ OUTPUT_DIR = global_setting.constants['output_dir']
 networkList = global_setting.constants['network_list']
 NUM_NETWORK = len(networkList)
 
-def weighted_choice(seq, weights):
-    w = np.asarray(weights)
-    p = w / w.sum()
-    return np.random.choice(seq, p=w)
-
 def get_subdivisions():
     T = NUM_TIME_SLOT
     R = NUM_REPEATS
@@ -67,6 +62,7 @@ def plot_graphs(results, deviceCsvDatas, networkCsvData):
     highestProbs = []
     for deviceID, csvData in deviceCsvDatas:
         probList = [get_data('probability%d'%i, csvData) for i in range(1,NUM_NETWORK+1)]
+        # print("probList:", probList); input()
         largests = [max(enumerate(probs), key=lambda tup:tup[1])[0]+1 for probs in zip(*probList)]
         highestProbs.append((deviceID, largests))
 
@@ -78,7 +74,7 @@ def plot_graphs(results, deviceCsvDatas, networkCsvData):
 
     dataRateList = [get_data('dataRate%d'%i, networkCsvData) for i in range(1,NUM_NETWORK+1)]
     dataRateList = [list(i) for i in zip(*dataRateList)]
-    
+
     SKIP_STEP = 1
 
     # plot bandwidth graph
@@ -147,16 +143,6 @@ def print_results(results, deviceCsvDatas, networkCsvData):
         for i in range(nUsers): counts[random.randrange(numNetworks)] += 1
         return min(dataRate/count for dataRate,count in zip(dataRates,counts) if count>0)
 
-    # estimated expected min bandwidth from a uniform distribution allocation
-    def estimateWeightedMinBandwidth(nUsers, dataRates):
-        numNetworks = len(dataRates)
-        seq = list(range(numNetworks))
-        w = np.asarray(dataRates)
-        p = w / w.sum()
-        counts = [0]*numNetworks
-        for i in range(nUsers): counts[np.random.choice(seq, p=p)] += 1
-        return min(dataRate/count for dataRate,count in zip(dataRates,counts) if count>0)
-
 
     for deviceID, cumulativeGain, maxCumulativeGain in results:
         logger.info("Device %d - Score: %.2f, Max: %.2f, Regret: %.2f" % 
@@ -182,18 +168,10 @@ def print_results(results, deviceCsvDatas, networkCsvData):
     uniformMinBandwidths = [estimateUniformMinBandwidth(NUM_MOBILE_DEVICE, dataRates) for dataRates in dataRateList]
     uniformMinBandwidth = statistics.mean(uniformMinBandwidths)*NUM_MOBILE_DEVICE
 
-    # optimally weighted min (per step)
-    weightedMinBandwidths = [estimateWeightedMinBandwidth(NUM_MOBILE_DEVICE, dataRates) for dataRates in dataRateList]
-    weightedMinBandwidth = statistics.mean(weightedMinBandwidths)*NUM_MOBILE_DEVICE
-
     for index, startEnd in enumerate(get_subdivisions()):
         start, end = startEnd
         averageStepwiseMin = statistics.mean(minGains[start:end])*NUM_MOBILE_DEVICE
-        averageOptMin = statistics.mean(optMinBandwidths[start:end])*NUM_MOBILE_DEVICE
-        averageWMin = statistics.mean(weightedMinBandwidths[start:end])*NUM_MOBILE_DEVICE
         logger.info('Div%dStepMin: %.2f' % (index, averageStepwiseMin))
-        logger.info('Div%dOptMin: %.2f' % (index, averageOptMin))
-        logger.info('Div%dWMin: %.2f' % (index, averageWMin))
 
     logger.info(", ".join((
         "MeanTotal: %.2f" % statistics.mean(cumulativeGains),
@@ -211,7 +189,6 @@ def print_results(results, deviceCsvDatas, networkCsvData):
     logger.info(", ".join((
         "optMinBandwidth: %.2f" % optMinBandwidth,
         "uniformMinBandwidth: %.2f" % uniformMinBandwidth,
-        "weightedMinBandwidth: %.2f" % weightedMinBandwidth,
     )))
 
 def analyze(results, deviceCsvDatas, networkCsvData):
